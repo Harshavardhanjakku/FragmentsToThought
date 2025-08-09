@@ -1,122 +1,164 @@
+ # 🌌 EchoesOfKnowledge
 
+> **"Fragments of thought, reassembled into clarity."**
 
-# 🌌 EchoesOfKnowledge
-
-> *"Every answer is an echo of something once known — retrieved, understood, and reborn through reason."*
-
-**EchoesOfKnowledge** is a **Groq-powered Retrieval-Augmented Generation (RAG)** chatbot built to converse using **only your curated knowledge base**.  
-By blending **semantic embeddings**, **intelligent chunking**, and **blazing-fast Groq inference**, it transforms scattered fragments of data into coherent, trustworthy answers.
+A lightning-fast **Retrieval-Augmented Generation (RAG)** chatbot built with **Groq LLM**, **semantic embeddings**, and **chunked knowledge bases**.  
+It retrieves precise information from your data using **Chroma vector search**, then crafts answers *strictly based on the provided context* — never hallucinating beyond it.
 
 ---
 
-## ✨ Features
+## 🚀 Features
 
-- ⚡ **Groq-Powered LLM** — Harness ultra-fast inference for near-instant responses.
-- 📚 **Knowledge-Bound** — Speaks only from the provided chunked dataset.
-- 🧩 **Intelligent Chunking** — Preserves context while splitting large documents.
-- 🎯 **Semantic Retrieval** — Embedding-based vector search for precise context fetching.
-- 🛡 **Hallucination Shield** — Out-of-scope queries are gracefully declined.
-- 💬 **Conversational Memory** *(optional)* — Keeps track of recent dialogue for multi-turn conversations.
+- **Groq-Powered Responses** – Blazing inference speed with `llama3-8b-8192`.
+- **Strict Context Awareness** – Only answers if relevant info exists in your data.
+- **Smart Chunking** – Markdown-aware splitting + optimized chunk sizes for better retrieval.
+- **Semantic Search** – `sentence-transformers/all-MiniLM-L6-v2` for high-quality embeddings.
+- **CLI Debug Mode** – Ask and test directly in your terminal.
+- **Modular Architecture** – Easy to extend for APIs or UI chatbots.
 
 ---
 
-## 🏗 Project Structure
+## 📂 Project Structure
 
 ```
 
-EchoesOfKnowledge/
+mychatbotbackend/
 │
-├── data/                # Your raw documents
-├── embeddings/          # Pre-computed vector embeddings
-├── backend/
-│   ├── app.py            # FastAPI/Flask backend with RAG pipeline
-│   ├── retriever.py      # Chunk search and ranking
-│   ├── groq\_client.py    # Groq API wrapper
+├── chroma/                  # Persisted Chroma vector store
+├── data/                     # Your source documents (Markdown, text, etc.)
 │
-├── frontend/
-│   ├── index.html        # Chat UI
-│   ├── style.css         # Styling
-│   ├── script.js         # API calls to backend
+├── create\_database.py        # Loads docs → chunks → embeds → saves to Chroma
+├── groqchat.py               # Retrieves context & queries Groq LLM
+├── query\_data.py             # Query interface for testing retrieval
+├── compare\_embeddings.py     # Compare & debug embeddings
+├── server.py                 # (Optional) Backend server to expose chatbot API
 │
-├── requirements.txt
-└── README.md
+├── requirements.txt          # Python dependencies
+└── .env                      # API keys (not committed)
 
 ````
 
 ---
 
-## 🚀 Getting Started
+## ⚙️ Setup
 
 ### 1️⃣ Clone the Repo
 ```bash
-git clone https://github.com/your-username/EchoesOfKnowledge.git
+git clone https://github.com/YOUR-USERNAME/EchoesOfKnowledge.git
 cd EchoesOfKnowledge
 ````
 
-### 2️⃣ Install Dependencies
+### 2️⃣ Create a Virtual Environment
+
+```bash
+python -m venv venv
+source venv/bin/activate  # macOS/Linux
+venv\Scripts\activate     # Windows
+```
+
+### 3️⃣ Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3️⃣ Prepare Your Data
+### 4️⃣ Add Environment Variables
 
-* Place your documents in the `data/` folder.
-* Run the embedding script:
+Create a `.env` file in the project root:
 
-```bash
-python backend/embed_data.py
+```env
+GROQ_API_KEY=your_groq_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
 ```
-
-### 4️⃣ Run the Backend
-
-```bash
-python backend/app.py
-```
-
-### 5️⃣ Open the Chat UI
-
-* Navigate to `frontend/index.html` in your browser.
 
 ---
 
-## ⚙️ Tech Stack
+## 📚 Usage
 
-* **Language Models**: Groq (Mixtral / LLaMA)
-* **Vector Search**: FAISS / Chroma
-* **Embeddings**: `sentence-transformers` / OpenAI embeddings
-* **Backend**: Python (FastAPI / Flask)
-* **Frontend**: HTML / CSS / JS
+### **Step 1: Build the Knowledge Base**
+
+```bash
+python create_database.py
+```
+
+This will:
+
+* Load all documents from `data/`
+* Chunk them intelligently
+* Generate embeddings
+* Save to `chroma/`
+
+### **Step 2: Ask Questions via CLI**
+
+```bash
+python groqchat.py
+```
+
+Example:
+
+```
+❓ Ask: Who is Harsha ? Tell me about him 
+[INFO] Searching and generating...
+
+Answer: The chapter focuses on ...
+```
+
+### **Step 3: (Optional) Run as an API**
+
+```bash
+python server.py
+```
+
+Then send POST requests to `/ask` with a JSON body:
+
+```json
+{
+  "question": "Explain about Jakku Harshavardhan Briefly"
+}
+```
 
 ---
 
 ## 🧠 How It Works
 
-1. **Chunking** — Large documents are split into overlapping text chunks for better retrieval.
-2. **Embedding** — Each chunk is converted into a high-dimensional vector.
-3. **Storage** — Embeddings are stored in a vector database.
-4. **Query** — User’s question is embedded and matched to top-k relevant chunks.
-5. **Generation** — Retrieved chunks + query are sent to Groq LLM for an answer.
-6. **Validation** — If relevant context is missing, it responds: *"I don't know."*
+1. **Chunking** – Your documents are split into manageable sections with overlap for better semantic retrieval.
+2. **Embeddings** – Each chunk is transformed into a vector using `sentence-transformers/all-MiniLM-L6-v2`.
+3. **Vector Search** – The query is embedded and matched against the Chroma database.
+4. **Groq LLM** – The top `k` results are passed to Groq's ultra-fast `llama3-8b-8192` model.
+5. **Strict Context** – If no relevant info is found, the bot says `"I don't know based on the provided context."`
 
 ---
 
-## 🛡 Out-of-Scope Handling
+## 🛠 Tech Stack
 
-If a user asks something **not present** in your dataset,
-`EchoesOfKnowledge` will *refuse to guess* — ensuring reliability over creativity.
+* **LLM:** [Groq](https://groq.com/) (`llama3-8b-8192`)
+* **Vector Store:** [Chroma](https://www.trychroma.com/)
+* **Embeddings:** [HuggingFace Sentence Transformers](https://www.sbert.net/)
+* **Document Loading & Splitting:** LangChain
+* **Backend:** Python
+* **Environment Management:** `python-dotenv`
 
 ---
 
-## 🤝 Contributing
+## 💡 Example Use Cases
 
-Pull requests are welcome! For major changes, please open an issue first
-to discuss what you would like to change.
+* **Enterprise Search** – Query company manuals, policies, or technical docs.
+* **Education** – Summarize or answer questions from textbooks.
+* **Knowledge Vault** – Build a private AI that knows only your curated information.
 
 ---
 
 ## 📜 License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
+
+## ✨ Author
+
+**Jakku Harshavardhan**
+*Fragments gathered, meaning restored.*
+
+```
+t banner?
+```
