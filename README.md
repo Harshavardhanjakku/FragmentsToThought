@@ -158,7 +158,4 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 **Jakku Harshavardhan**
 *Fragments gathered, meaning restored.*
-
-```
-t banner?
-```
+ 
