@@ -1,3 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.env.*
+venv/
+.venv/
+env/
+
+# Packaging
+build/
+dist/
+*.egg-info/
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Chroma cache (keep persisted store directory but ignore temp files)
+chroma/*.log
+chroma/tmp/
+
 .env
 chroma_*
 chroma
