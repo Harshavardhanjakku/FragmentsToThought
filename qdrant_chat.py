@@ -1,9 +1,16 @@
-# groqchat.py - Qdrant Cloud version (fast & serverless-friendly)
+#!/usr/bin/env python3
+"""
+Qdrant Cloud-powered chatbot - Fast, serverless-friendly version
+No heavy model downloads, uses Qdrant Cloud for vector storage
+"""
+
 import os
 from dotenv import load_dotenv
 from groq import Groq
 from qdrant_client import QdrantClient
+from qdrant_client.models import Filter, FieldCondition, MatchValue
 import requests
+import json
 
 load_dotenv()
 
@@ -16,7 +23,7 @@ GROQ_MODEL = "llama-3.1-8b-instant"
 
 # Initialize clients
 if not GROQ_API_KEY:
-    raise RuntimeError("GROQ_API_KEY not found in environment (.env or env vars)")
+    raise RuntimeError("GROQ_API_KEY not found in environment")
 
 if not QDRANT_URL or not QDRANT_API_KEY:
     raise RuntimeError("QDRANT_URL and QDRANT_API_KEY must be set in environment")
@@ -25,8 +32,12 @@ groq_client = Groq(api_key=GROQ_API_KEY)
 qdrant_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 
 def get_embeddings_from_api(text: str) -> list:
-    """Get embeddings using HuggingFace Inference API (serverless-friendly)"""
+    """
+    Get embeddings using HuggingFace Inference API (free, no model download)
+    Alternative: Use OpenAI embeddings API or other embedding services
+    """
     try:
+        # Using HuggingFace Inference API (free tier available)
         response = requests.post(
             "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2",
             headers={"Authorization": f"Bearer {os.getenv('HF_TOKEN', '')}"},
@@ -36,9 +47,11 @@ def get_embeddings_from_api(text: str) -> list:
         if response.status_code == 200:
             return response.json()
         else:
-            # Fallback: simple hash-based embedding
+            # Fallback: Use a simple hash-based embedding (not ideal but works)
+            print("⚠️ Using fallback embedding method")
             import hashlib
             hash_obj = hashlib.md5(text.encode())
+            # Create a 384-dimensional vector from hash
             hash_bytes = hash_obj.digest()
             embedding = []
             for i in range(384):
@@ -46,6 +59,7 @@ def get_embeddings_from_api(text: str) -> list:
             return embedding
             
     except Exception as e:
+        print(f"⚠️ Error getting embeddings: {e}")
         # Fallback embedding
         import hashlib
         hash_obj = hashlib.md5(text.encode())
@@ -75,8 +89,9 @@ def search_qdrant(query: str, k: int = 3) -> list:
         return []
 
 def get_answer_from_groq(context: str, question: str) -> str:
+    """Generate answer using Groq LLM"""
     prompt = f"""
-You are a highly knowledgeable assistant trained to answer based **strictly** on the given context. 
+You are a highly knowledgeable assistant trained to answer based **strictly** on the given context.
 
 CONTEXT:
 {context}
@@ -88,6 +103,7 @@ INSTRUCTIONS:
 - If the context is relevant, give a complete, clear answer.
 - If the context is vague or doesn't have the answer, respond only with: "I don't know based on the provided context."
 """
+    
     try:
         response = groq_client.chat.completions.create(
             model=GROQ_MODEL,
@@ -104,18 +120,16 @@ INSTRUCTIONS:
 
 def generate_answer(question: str, k: int = 3) -> str:
     """
-    High-level API: searches Qdrant Cloud and asks Groq for an answer.
-    Returns a string (answer) in all cases (or an error message string).
+    High-level API: searches Qdrant and asks Groq for an answer
     """
-    try:
-        # Search Qdrant Cloud
-        results = search_qdrant(question, k=k)
-    except Exception as e:
-        return f"[ERROR] Vector search failed: {e}"
-
+    print(f"🔍 Searching for: {question}")
+    
+    # Search Qdrant
+    results = search_qdrant(question, k=k)
+    
     if not results:
         return "I don't know based on the provided context."
-
+    
     # Build context from search results
     context_parts = []
     for result in results:
@@ -127,14 +141,22 @@ def generate_answer(question: str, k: int = 3) -> str:
         return "I don't know based on the provided context."
     
     context = "\n\n".join(context_parts)
-    return get_answer_from_groq(context.strip(), question)
+    
+    # Generate answer
+    print("🤖 Generating answer with Groq...")
+    return get_answer_from_groq(context, question)
 
-# keep CLI for debugging
+# CLI for testing
 if __name__ == "__main__":
-    print("[INFO] Running groqchat CLI. Type 'exit' to quit.")
+    print("🚀 Qdrant Cloud Chatbot - Fast & Serverless!")
+    print("Type 'exit' to quit.\n")
+    
     while True:
-        q = input("\n❓ Ask: ").strip()
-        if q.lower() in {"exit", "quit"}:
+        question = input("❓ Ask: ").strip()
+        if question.lower() in {"exit", "quit"}:
             break
-        print("\n[INFO] Searching and generating...\n")
-        print(generate_answer(q))
+        
+        print("\n" + "="*50)
+        answer = generate_answer(question)
+        print(f"\n💬 Answer: {answer}")
+        print("="*50 + "\n")
