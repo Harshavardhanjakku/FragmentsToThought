@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from advanced_rag import rag_system
+from rag_system import rag_system
 import uvicorn
 import os
 from dotenv import load_dotenv
