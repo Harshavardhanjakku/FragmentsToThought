@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """
-Migration script to move from ChromaDB to Qdrant Cloud
-Run this once to migrate your existing ChromaDB data to Qdrant Cloud
+Simple migration script for ChromaDB to Qdrant Cloud
 """
 
 import os
-import json
 from dotenv import load_dotenv
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
@@ -22,14 +20,10 @@ QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 COLLECTION_NAME = "fragments_to_thought"
 
-def migrate_to_qdrant():
-    """Migrate ChromaDB data to Qdrant Cloud"""
+def simple_migrate():
+    """Simple migration from ChromaDB to Qdrant Cloud"""
     
-    if not QDRANT_URL or not QDRANT_API_KEY:
-        print("Please set QDRANT_URL and QDRANT_API_KEY in your .env file")
-        return
-    
-    print("Starting migration from ChromaDB to Qdrant Cloud...")
+    print("Starting simple migration...")
     
     # Initialize Qdrant client
     print("Connecting to Qdrant Cloud...")
@@ -38,13 +32,13 @@ def migrate_to_qdrant():
         api_key=QDRANT_API_KEY
     )
     
-    # Create collection if it doesn't exist
+    # Create collection
     print(f"Creating collection '{COLLECTION_NAME}'...")
     try:
         qdrant_client.create_collection(
             collection_name=COLLECTION_NAME,
             vectors_config=VectorParams(
-                size=384,  # all-MiniLM-L6-v2 embedding size
+                size=384,
                 distance=Distance.COSINE
             )
         )
@@ -56,8 +50,8 @@ def migrate_to_qdrant():
             print(f"Error creating collection: {e}")
             return
     
-    # Load existing ChromaDB
-    print("Loading existing ChromaDB...")
+    # Load ChromaDB
+    print("Loading ChromaDB...")
     try:
         embeddings = HuggingFaceEmbeddings(model_name=MODEL_NAME)
         chroma_db = Chroma(
@@ -65,41 +59,39 @@ def migrate_to_qdrant():
             embedding_function=embeddings
         )
         
-        # Get all documents from ChromaDB
-        print("Retrieving all documents from ChromaDB...")
-        all_docs = chroma_db.get()
+        # Get documents using similarity search (more reliable)
+        print("Retrieving documents using similarity search...")
+        all_docs = chroma_db.similarity_search("", k=1000)  # Get all docs
         
-        if not all_docs or not all_docs.get('documents'):
+        if not all_docs:
             print("No documents found in ChromaDB")
             return
-            
-        documents = all_docs['documents']
-        embeddings_list = all_docs['embeddings']
-        metadatas = all_docs['metadatas']
-        ids = all_docs['ids']
         
-        print(f"Found {len(documents)} documents to migrate")
+        print(f"Found {len(all_docs)} documents to migrate")
         
         # Prepare points for Qdrant
         points = []
-        for i, (doc, embedding, metadata, doc_id) in enumerate(zip(documents, embeddings_list, metadatas, ids)):
+        for i, doc in enumerate(all_docs):
+            # Get embedding for this document
+            doc_embedding = embeddings.embed_query(doc.page_content)
+            
             point = PointStruct(
                 id=str(uuid.uuid4()),
-                vector=embedding,
+                vector=doc_embedding,
                 payload={
-                    "content": doc,
-                    "metadata": metadata,
-                    "original_id": doc_id
+                    "content": doc.page_content,
+                    "metadata": doc.metadata,
+                    "original_id": f"doc_{i}"
                 }
             )
             points.append(point)
             
-            if (i + 1) % 100 == 0:
-                print(f"Prepared {i + 1}/{len(documents)} points...")
+            if (i + 1) % 10 == 0:
+                print(f"Prepared {i + 1}/{len(all_docs)} points...")
         
-        # Upload to Qdrant in batches
+        # Upload to Qdrant
         print("Uploading to Qdrant Cloud...")
-        batch_size = 100
+        batch_size = 50
         for i in range(0, len(points), batch_size):
             batch = points[i:i + batch_size]
             qdrant_client.upsert(
@@ -108,12 +100,12 @@ def migrate_to_qdrant():
             )
             print(f"Uploaded batch {i//batch_size + 1}/{(len(points)-1)//batch_size + 1}")
         
-        print(f"Successfully migrated {len(documents)} documents to Qdrant Cloud!")
-        print(f"Collection URL: {QDRANT_URL}/collections/{COLLECTION_NAME}")
+        print(f"Successfully migrated {len(all_docs)} documents to Qdrant Cloud!")
         
     except Exception as e:
         print(f"Error during migration: {e}")
-        return
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
-    migrate_to_qdrant()
+    simple_migrate()

@@ -133,7 +133,7 @@ def generate_answer(question: str, k: int = 3) -> str:
 if __name__ == "__main__":
     print("[INFO] Running groqchat CLI. Type 'exit' to quit.")
     while True:
-        q = input("\n❓ Ask: ").strip()
+        q = input("\nAsk: ").strip()
         if q.lower() in {"exit", "quit"}:
             break
         print("\n[INFO] Searching and generating...\n")
