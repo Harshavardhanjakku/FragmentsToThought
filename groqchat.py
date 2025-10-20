@@ -52,14 +52,14 @@ def search_qdrant(query: str, k: int = 3) -> list:
         # Get query embedding
         query_embedding = get_embeddings_from_api(query)
         
-        # Search in Qdrant using the new query_points method
-        search_results = qdrant_client.query_points(
+        # Search in Qdrant using the search method
+        search_results = qdrant_client.search(
             collection_name=COLLECTION_NAME,
-            query=query_embedding,
+            query_vector=query_embedding,
             limit=k
         )
         
-        return search_results.points
+        return search_results
         
     except Exception as e:
         print(f"Error searching Qdrant: {e}")

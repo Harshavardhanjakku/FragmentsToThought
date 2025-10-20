@@ -107,13 +107,11 @@ async def ask_question(data: QuestionRequest):
         query_embedding = get_embeddings_from_api(data.question)
         
         # Search in Qdrant Cloud
-        search_results = qdrant_client.query_points(
+        search_results = qdrant_client.search(
             collection_name=COLLECTION_NAME,
-            query=query_embedding,
+            query_vector=query_embedding,
             limit=3
         )
-        
-        search_results = search_results.points
         
         if not search_results:
             return {"answer": "I don't know based on the provided context."}
