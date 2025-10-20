@@ -5,7 +5,7 @@ pydantic==2.11.7
 python-dotenv==1.1.1
 
 # Qdrant Cloud client (lightweight)
-qdrant-client==1.7.0
+qdrant-client==1.15.1
 
 # Groq LLM client
 groq==0.11.0
