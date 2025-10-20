@@ -27,23 +27,14 @@ qdrant_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 def get_embeddings_from_api(text: str) -> list:
     """Get embeddings using HuggingFace Inference API (serverless-friendly)"""
     try:
-        response = requests.post(
-            "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2",
-            headers={"Authorization": f"Bearer {os.getenv('HF_TOKEN', '')}"},
-            json={"inputs": text}
-        )
-        
-        if response.status_code == 200:
-            return response.json()
-        else:
-            # Fallback: simple hash-based embedding
-            import hashlib
-            hash_obj = hashlib.md5(text.encode())
-            hash_bytes = hash_obj.digest()
-            embedding = []
-            for i in range(384):
-                embedding.append((hash_bytes[i % len(hash_bytes)] - 128) / 128.0)
-            return embedding
+        # For now, use simple hash-based embedding as fallback
+        import hashlib
+        hash_obj = hashlib.md5(text.encode())
+        hash_bytes = hash_obj.digest()
+        embedding = []
+        for i in range(384):
+            embedding.append((hash_bytes[i % len(hash_bytes)] - 128) / 128.0)
+        return embedding
             
     except Exception as e:
         # Fallback embedding

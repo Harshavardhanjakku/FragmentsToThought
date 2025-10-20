@@ -125,14 +125,14 @@ def save_to_chroma(chunks: list[Document]):
         print(f"[ERROR] ❌ Failed to create Chroma DB: {str(e)}")
         exit(1)
 
-    print("[DEBUG] 💾 Persisting Chroma DB (note: Chroma auto-saves, so this is quick)...")
+    print("[DEBUG] Persisting Chroma DB (note: Chroma auto-saves, so this is quick)...")
     persist_start = time.time()
     db.persist()
-    print(f"[DEBUG] ✅ Chroma DB persisted in {time.time() - persist_start:.2f} sec.")
+    print("[DEBUG] Chroma DB persisted in {:.2f} sec.".format(time.time() - persist_start))
 
-    print(f"[DEBUG] 🎉 Saved {len(chunks)} chunk(s) to {CHROMA_PATH}.")
+    print("[DEBUG] Saved {} chunk(s) to {}.".format(len(chunks), CHROMA_PATH))
 
 
 if __name__ == "__main__":
-    print("[DEBUG] 🏁 __main__ entry point reached.")
+    print("[DEBUG] Main entry point reached.")
     main()
