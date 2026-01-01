@@ -216,10 +216,10 @@ class AdvancedDocumentProcessor:
     def _split_general_content(self, content: str, metadata: Dict) -> List[Document]:
         """General splitting for other content types"""
         # Use RecursiveCharacterTextSplitter with optimized parameters
-        text_splitter = RecursiveCharacterTextSplitter(
+    text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=800,
             chunk_overlap=150,
-            length_function=len,
+        length_function=len,
             separators=["\n\n", "\n", ". ", "! ", "? ", " ", ""]
         )
         
@@ -255,8 +255,8 @@ class AdvancedDocumentProcessor:
         
         if current_chunk.strip():
             chunks.append(Document(page_content=current_chunk.strip(), metadata={}))
-        
-        return chunks
+
+    return chunks
 
     def _calculate_importance(self, text: str) -> float:
         """Calculate importance score for a chunk"""
@@ -321,7 +321,7 @@ class AdvancedDocumentProcessor:
         db = Chroma.from_documents(chunks, embeddings, persist_directory=self.CHROMA_PATH)
         
         print("[DEBUG] Persisting Chroma DB...")
-        db.persist()
+    db.persist()
         
         print(f"[DEBUG] Successfully saved {len(chunks)} optimized chunks to {self.CHROMA_PATH}")
         
