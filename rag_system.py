@@ -36,19 +36,38 @@ class RAGSystem:
 
         self.COLLECTION_NAME = "fragments_to_thought"
 
-        # Clients
-        self.qdrant = QdrantClient(
-            url=self.QDRANT_URL,
-            api_key=self.QDRANT_API_KEY,
-            timeout=60
-        )
+        # Clients (lazy-loaded for faster startup)
+        self._qdrant = None
+        self._llm = None
+        self._embedder = None
 
-        self.llm = Groq(api_key=self.GROQ_API_KEY)
+    @property
+    def qdrant(self):
+        """Lazy-load Qdrant client."""
+        if self._qdrant is None:
+            self._qdrant = QdrantClient(
+                url=self.QDRANT_URL,
+                api_key=self.QDRANT_API_KEY,
+                timeout=60
+            )
+        return self._qdrant
 
-        # MUST match migration model
-        self.embedder = SentenceTransformer(
-            "sentence-transformers/all-MiniLM-L6-v2"
-        )
+    @property
+    def llm(self):
+        """Lazy-load Groq LLM client."""
+        if self._llm is None:
+            self._llm = Groq(api_key=self.GROQ_API_KEY)
+        return self._llm
+
+    @property
+    def embedder(self):
+        """Lazy-load SentenceTransformer (heaviest initialization)."""
+        if self._embedder is None:
+            # MUST match migration model
+            self._embedder = SentenceTransformer(
+                "sentence-transformers/all-MiniLM-L6-v2"
+            )
+        return self._embedder
 
     # ─────────────────────────────────────────────
     # SEARCH

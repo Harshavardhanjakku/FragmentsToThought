@@ -1,0 +1,47 @@
+name: Keep Render Service Alive
+
+on:
+  schedule:
+    # Run every 10 minutes
+    - cron: '*/10 * * * *'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Ping Render Health Endpoint
+        run: |
+          RENDER_URL="${{ secrets.RENDER_URL }}"
+          
+          if [ -z "$RENDER_URL" ]; then
+            echo "⚠️  RENDER_URL secret not set. Skipping ping."
+            exit 0
+          fi
+          
+          echo "🔍 Pinging: $RENDER_URL/health"
+          
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 30 \
+            "$RENDER_URL/health")
+          
+          if [ "$response" = "200" ]; then
+            echo "✅ Ping successful (HTTP $response)"
+          else
+            echo "⚠️  Ping returned HTTP $response"
+            exit 1
+          fi
+      
+      - name: Optional Warm-up Ping
+        if: success()
+        run: |
+          RENDER_URL="${{ secrets.RENDER_URL }}"
+          
+          if [ -z "$RENDER_URL" ]; then
+            exit 0
+          fi
+          
+          echo "🔥 Warming up RAG system..."
+          curl -s --max-time 60 "$RENDER_URL/health/warm" || true
