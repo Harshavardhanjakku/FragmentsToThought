@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-🔥 Production-Grade RAG System (Qdrant + Groq)
-- REAL embeddings
-- Correct Qdrant payload handling
-- Render-safe
-- No fake vectors
+🔥 Production-Grade LOCAL RAG System (Chroma + Groq)
+- Local ChromaDB
+- Real embeddings
+- Clean retrieval
+- Resume-safe (Jakku Harshavardhan only)
 """
 
 import os
@@ -12,9 +12,9 @@ import warnings
 from typing import List
 
 from dotenv import load_dotenv
-from qdrant_client import QdrantClient
+from langchain_community.vectorstores import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
 from groq import Groq
-from sentence_transformers import SentenceTransformer
 
 # Load environment variables
 load_dotenv()
@@ -27,51 +27,40 @@ warnings.filterwarnings(
 )
 
 
-class RAGSystem:
+class LocalRAGSystem:
     def __init__(self):
         # ENV
-        self.QDRANT_URL = os.getenv("QDRANT_URL")
-        self.QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
         self.GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-        self.COLLECTION_NAME = "fragments_to_thought"
+        self.CHROMA_PATH = "chroma"
+        self.MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
-        # Clients
-        self.qdrant = QdrantClient(
-            url=self.QDRANT_URL,
-            api_key=self.QDRANT_API_KEY,
-            timeout=60
+        # Embeddings (MUST match create_database.py)
+        self.embedder = HuggingFaceEmbeddings(
+            model_name=self.MODEL_NAME
         )
 
+        # Load Local Chroma DB
+        self.db = Chroma(
+            persist_directory=self.CHROMA_PATH,
+            embedding_function=self.embedder
+        )
+
+        # Groq LLM
         self.llm = Groq(api_key=self.GROQ_API_KEY)
 
-        # MUST match migration model
-        self.embedder = SentenceTransformer(
-            "sentence-transformers/all-MiniLM-L6-v2"
-        )
-
     # ─────────────────────────────────────────────
-    # SEARCH
+    # RETRIEVAL
     # ─────────────────────────────────────────────
 
     def retrieve(self, query: str, k: int = 5) -> List[str]:
-        """Retrieve top-k contexts from Qdrant for a given query."""
-        vector = self.embedder.encode(query).tolist()
-
-        results = self.qdrant.query_points(
-            collection_name=self.COLLECTION_NAME,
-            query=vector,
-            limit=k,
-            with_payload=True,
-            score_threshold=0.3,  # similarity guard (cosine similarity: 0.3-0.9 typical range)
-        )
+        """Retrieve top-k contexts from local Chroma for a given query."""
+        results = self.db.similarity_search(query, k=k)
 
         contexts: List[str] = []
-        for point in results.points:
-            payload = point.payload or {}
-            content = payload.get("content")
-            if content:
-                contexts.append(content)
+        for doc in results:
+            if doc.page_content:
+                contexts.append(doc.page_content)
 
         return contexts
 
@@ -136,12 +125,12 @@ Answer based on CONTEXT:
 
 
 # Global instance
-rag = RAGSystem()
+rag = LocalRAGSystem()
 
 
-# CLI testing
+# CLI Testing
 if __name__ == "__main__":
-    print("🔥 RAG SYSTEM READY (Qdrant + Groq)")
+    print("🔥 LOCAL RAG SYSTEM READY (Chroma + Groq)")
     print("Type 'exit' to quit\n")
 
     try:
@@ -157,4 +146,4 @@ if __name__ == "__main__":
             print(rag.ask(q))
             print("=" * 60 + "\n")
     except KeyboardInterrupt:
-        print("\nExiting RAG system.")
+        print("\nExiting LOCAL RAG system.")
