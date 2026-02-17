@@ -100,7 +100,7 @@ async def options_ask():
 # -----------------------------
 # HEALTH CHECK
 # -----------------------------
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD", "POST"])
 async def health():
     """
     Health check endpoint - lightweight, no RAG initialization.
